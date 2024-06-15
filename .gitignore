@@ -3,6 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Local Credentials
+creds/
+token.pickle
+
+# Local CSVs
+*.csv
+
+# Local Misc
+col_list.txt
+yfinance.cache
+
 # C extensions
 *.so
 
