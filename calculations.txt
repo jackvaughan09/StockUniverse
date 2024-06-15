@@ -1,0 +1,149 @@
+def calculate_nwc_change(balance_sheet):
+    # NWC (most broad interpretation) = Current Assets - Current Liabilities
+    # DeltaNWC = Prior Period NWC - Current Period NWC
+    cur_nwc = get_latest_value(balance_sheet, "Working Capital")
+    prior_balance = balance_sheet.iloc[:, 1:]
+    prior_nwc = get_latest_value(prior_balance, "Working Capital")
+    if prior_nwc - cur_nwc == 0:
+        print(f"prior: {prior_nwc}, current: {cur_nwc}")
+    return prior_nwc - cur_nwc
+
+
+def _calculate_non_cash_wc_for_period(balance_sheet):
+    ar = get_latest_value(balance_sheet, "Accounts Receivable")
+    inv = get_latest_value(balance_sheet, "Inventory")
+    ap = get_latest_value(balance_sheet, "Accounts Payable")
+    return ar + inv - ap
+
+
+def calculate_non_cash_wc(balance_sheet):
+    current = _calculate_non_cash_wc_for_period(balance_sheet)
+    prior_bs = balance_sheet.iloc[:, 1:]
+    prior = _calculate_non_cash_wc_for_period(prior_bs)
+    return prior - current
+
+
+def calculate_ufcf(cash_flow, income_statement, balance_sheet):
+    # Unlevered Free Cash Flow
+    # EBIT*(1-tax rate) + D&A – ∆NWC – CAPEX
+    nopat = get_latest_value(income_statement, "EBIT") * (
+        1 - get_latest_value(income_statement, "Tax Rate For Calcs")
+    )  # Net Operating Profit After Tax
+    dep_am = get_latest_value(cash_flow, "Depreciation And Amortization")
+    change_in_non_cash_wc = calculate_non_cash_wc(balance_sheet)
+    capex = get_latest_value(cash_flow, "Capital Expenditure")
+    # Calculate UFCF
+    ufcf = nopat + dep_am - change_in_non_cash_wc - capex
+    return ufcf
+
+
+def calculate_sfcf(cash_flow):
+    # Simple Free Cash Flow
+    operating_cash = get_latest_value(cash_flow, "Operating Cash Flow")
+    capex = get_latest_value(cash_flow, "Capital Expenditure")
+    return operating_cash - capex
+
+
+def calculate_net_net_wc_to_price(balance_sheet, market_cap):
+    # ((Cash + Short Term Marketable Investments + (Accounts Receivable * 75%) + (Inventory * 50%)  - Total Liabilities)
+    # / # of shares) / Price
+    # convert /shares/price -> /market_cap
+    ccesti = get_latest_value(
+        balance_sheet, "Cash Cash Equivalents And Short Term Investments"
+    )
+    disc_AR = 0.75 * get_latest_value(balance_sheet, "Accounts Receivable")
+    disc_INV = 0.5 * get_latest_value(balance_sheet, "Inventory")
+    tot_liab = get_latest_value(balance_sheet, "Total Assets") - get_latest_value(
+        balance_sheet, "Stockholders Equity"
+    )
+    return float(f"{(ccesti + disc_AR + disc_INV - tot_liab) / market_cap:.2f}")
+
+
+
+Total Liabilities = Total Assets - Stockholders Equity
+
+"tax shield": "Interest Expense" * "Tax Rate For Calcs"
+
+"ncash": "totalCash"- "totalDebt"
+    
+"s/ p": safe_get(
+            lambda: calculate_ratio(info.get("totalRevenue"), info.get("marketCap"))
+        ),
+
+"ebitda/ ev": safe_get(
+    lambda: calculate_ratio(1, info.get("enterpiseToEbitda"))
+),
+
+"tb/ p": safe_get(
+    lambda: calculate_ratio(
+        get_latest_value(balance_sheet, "Net Tangible Assets"),
+        info.get("marketCap"),
+    )
+),
+
+
+"b/ p": safe_get(lambda: calculate_ratio(1, info.get("priceToBook"))),
+
+"e/ p": safe_get(
+    lambda: calculate_ratio(info.get("trailingEps"), info.get("marketCap"))
+),
+
+"cfo/ p": safe_get(
+    lambda: calculate_ratio(
+        info.get("operatingCashflow"), info.get("marketCap")
+    )
+),
+
+"sfcf/ p": safe_get(
+    lambda: calculate_ratio(calculate_sfcf(cash_flow), info.get("marketCap"))
+),
+
+"ncf/ p": safe_get(
+    lambda: calculate_ratio(
+        get_latest_value(cash_flow, "Operating Cash Flow")
+        + get_latest_value(cash_flow, "Investing Cash Flow")
+        + get_latest_value(cash_flow, "Financing Cash Flow"),
+        info.get("marketCap"),
+    )
+),
+
+"div/ p": safe_get(
+    lambda: calculate_ratio(info.get("dividendRate"), info.get("marketCap"))
+),
+
+"cash/ p": safe_get(
+    lambda: calculate_ratio(info.get("totalCash"), info.get("marketCap"))
+),
+
+"ncash/ p": safe_get(
+    lambda: calculate_ratio(
+        info.get("totalCash", 0) - info.get("totalDebt", 0),
+        info.get("marketCap"),
+    )
+),
+
+"nn/ p*": safe_get(
+    lambda: calculate_net_net_wc_to_price(balance_sheet, info.get("marketCap"))
+),
+
+"asset/ p": safe_get(
+    lambda: calculate_ratio(
+        get_latest_value(balance_sheet, "Total Assets"), info.get("marketCap")
+    )
+),
+
+"retear/ mc": safe_get(
+    lambda: calculate_ratio(
+        get_latest_value(balance_sheet, "Retained Earnings"),
+        info.get("marketCap"),
+    )
+),
+
+"revs/ debt": safe_get(
+    lambda: calculate_ratio(info.get("totalRevenue"), info.get("totalDebt"))
+),
+
+"mc/ ev": safe_get(
+    lambda: calculate_ratio(info.get("marketCap"), info.get("enterpriseValue"))
+),
+
