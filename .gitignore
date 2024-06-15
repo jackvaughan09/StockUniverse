@@ -13,6 +13,7 @@ token.pickle
 # Local Misc
 col_list.txt
 yfinance.cache
+.DS_Store*
 
 # C extensions
 *.so
